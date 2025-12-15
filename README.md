@@ -19,6 +19,7 @@
 
 ## Установка (macOS / Linux)
 
+
 ## 1) Положи скрипт `cheat` в:
 - `~/.local/bin/cheat`
 
@@ -30,9 +31,16 @@ chmod +x ~/.local/bin/cheat
 
 ## Установка (macOS / Linux) для новичков
 
-Шаг 1. Создай папку для своих команд (если её нет)
+Шаг 1. Создай папку для своих команд и скопируй конфигурационные файлы из этого репозитория:
 ```bash
-mkdir -p ~/.local/bin
+mkdir -p ~/.local/bin ~/cheats
+curl -fsSL https://raw.githubusercontent.com/mrmirzoh/cheat-md/main/cheat -o ~/.local/bin/cheat
+chmod +x ~/.local/bin/cheat
+```
+
+# (опционально) пример cheats.md в твой дефолтный путь
+```bash
+curl -fsSL https://raw.githubusercontent.com/mrmirzoh/cheat-md/main/cheats.md -o ~/cheats/cheats.md
 ```
 
 ## Шаг 2. Убедись, что `~/.local/bin` есть в PATH
@@ -73,7 +81,7 @@ cheat --help
 
 Быстрый старт
 
-##1) Создать/открыть файл шпаргалки
+## 1) Создать/открыть файл шпаргалки
 ```bash
 cheat --edit
 ```
