@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CHEAT_FILE="${CHEAT_FILE:-$HOME/cheats/cheats.md}"
+
+show_help() {
+  cat <<'H'
+cheat — поиск по шпаргалке в Markdown
+
+Флаги:
+  cheat --path   показать путь к файлу
+  cheat --edit   открыть файл в редакторе
+  cheat --help
+
+Поиск:
+  cheat ssh ключ
+  cheat nvim сохранить
+H
+}
+
+case "${1:-}" in
+  --path) echo "$CHEAT_FILE"; exit 0 ;;
+  --edit)
+    mkdir -p "$(dirname "$CHEAT_FILE")"
+    [[ -f "$CHEAT_FILE" ]] || touch "$CHEAT_FILE"
+    "${EDITOR:-nvim}" "$CHEAT_FILE"
+    exit 0
+    ;;
+  --help|-h) show_help; exit 0 ;;
+esac
+
+[[ -f "$CHEAT_FILE" ]] || { echo "Нет файла: $CHEAT_FILE"; echo "Сделай: cheat --edit"; exit 1; }
+[[ $# -gt 0 ]] || { echo "Использование: cheat <слова...>"; exit 2; }
+
+query="$*"
+
+out="$(
+  awk -v IGNORECASE=1 -v q="$query" '
+    function norm(s){
+      s=tolower(s)
+      gsub(/[[:space:]]+/," ",s)
+      gsub(/^[[:space:]]+|[[:space:]]+$/,"",s)
+      return s
+    }
+
+    # экранируем regex-метасимволы для gsub()
+    function esc_re(s){
+      gsub(/[][(){}.^$|*+?\\]/, "\\\\&", s)
+      return s
+    }
+
+    # подсветка всех слов запроса в тексте
+    function highlight(text,   i,t,re){
+      for (i=1; i<=n; i++){
+        t = terms[i]
+        if (t=="") continue
+        re = esc_re(t)
+        gsub(re, "\033[1;31m&\033[0m", text)
+      }
+      return text
+    }
+
+    BEGIN {
+      q0 = norm(q)
+      n = split(q0, terms, " ")
+      inrec=0
+      rec=""
+    }
+
+    # новая запись начинается с ## или ###
+    /^[[:space:]]*###[[:space:]]/ || /^[[:space:]]*##[[:space:]]/ {
+      if (inrec) {
+        low = norm(rec); ok=1
+        for (i=1; i<=n; i++){
+          if (terms[i]=="") continue
+          if (index(low, terms[i])==0){ ok=0; break }
+        }
+        if (ok) print highlight(rec) "\n"
+      }
+      inrec=1; rec=$0; next
+    }
+
+    { if (inrec) rec = rec "\n" $0 }
+
+    END {
+      if (inrec) {
+        low = norm(rec); ok=1
+        for (i=1; i<=n; i++){
+          if (terms[i]=="") continue
+          if (index(low, terms[i])==0){ ok=0; break }
+        }
+        if (ok) print highlight(rec) "\n"
+      }
+    }
+  ' "$CHEAT_FILE"
+)"
+
+[[ -n "$out" ]] || { echo "Ничего не найдено: $query"; exit 1; }
+
+# Всегда отдельный экран (pager) + цвета
+printf '%s\n' "$out" | less -R
